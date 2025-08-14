@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=mongo
+      - DB_USER=${DB_USER:-mongo}
+      - DB_PASSWORD=${DB_PASSWORD:-mongo}
+      - DB_NAME=${DB_NAME:-go_notifier}
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DB_USER:-mongo}
+      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD:-mongo}
+      - MONGO_INITDB_DATABASE=${DB_NAME:-go_notifier}
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
