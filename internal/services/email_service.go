@@ -11,12 +11,12 @@ import (
 const EmailCollectionName = "emails"
 
 type EmailService struct {
-	cfg             *config.Config
 	db              *database.Database
+	cfg             *config.Config
 	emailCollection *mongo.Collection
 }
 
-func NewEmailService(cfg *config.Config, db *database.Database) *EmailService {
+func NewEmailService(db *database.Database, cfg *config.Config) *EmailService {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -27,8 +27,8 @@ func NewEmailService(cfg *config.Config, db *database.Database) *EmailService {
 	collection := db.MongoDB.Collection(EmailCollectionName)
 
 	return &EmailService{
-		cfg:             cfg,
 		db:              db,
+		cfg:             cfg,
 		emailCollection: collection,
 	}
 }
