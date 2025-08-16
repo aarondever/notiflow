@@ -3,39 +3,52 @@ package config
 import (
 	"fmt"
 	"github.com/joho/godotenv"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 )
 
 type Config struct {
-	AppEnv      string // Environment type (development, production)
-	Host        string
-	Port        int
-	DatabaseURL string
-	DBName      string
-	Timezone    *time.Location
+	AppEnv       string // Environment type (development, production)
+	Host         string
+	Port         int
+	DatabaseURL  string
+	DBName       string
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUsername string
+	SMTPPassword string
+	FromEmail    string
+	Timezone     *time.Location
 }
 
 func Load() (*Config, error) {
 	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
+		slog.Info("No .env file found")
 	}
 
 	// Get timezone from environment or use UTC as default
 	tzName := getStringEnv("TZ", "UTC")
 	timezone, err := time.LoadLocation(tzName)
 	if err != nil {
-		log.Printf("Invalid timezone: %s, using UTC instead", tzName)
+		slog.Warn("Invalid timezone, using UTC instead", "timezone", tzName, "error", err)
 		timezone = time.UTC
 	}
 
+	// Config timezone
+	time.Local = timezone
+	slog.Info("Application timezone configured", "timezone", timezone.String())
+
 	cfg := &Config{
-		AppEnv:   getStringEnv("APP_ENV", "development"),
-		Host:     getStringEnv("HOST", "0.0.0.0"),
-		Port:     getIntEnv("PORT", 8080),
-		DBName:   getStringEnv("DB_NAME", "go_notifier"),
-		Timezone: timezone,
+		AppEnv:       getStringEnv("APP_ENV", "development"),
+		Host:         getStringEnv("HOST", "0.0.0.0"),
+		Port:         getIntEnv("PORT", 8080),
+		DBName:       getStringEnv("DB_NAME", "go_notifier"),
+		SMTPHost:     getStringEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:     getIntEnv("SMTP_PORT", 587),
+		SMTPUsername: getStringEnv("SMTP_USERNAME", ""),
+		SMTPPassword: getStringEnv("SMTP_PASSWORD", ""),
+		Timezone:     timezone,
 	}
 
 	// Build database URL
@@ -66,7 +79,10 @@ func getIntEnv(key string, defaultValue int) int {
 			if char >= '0' && char <= '9' {
 				result = result*10 + int(char-'0')
 			} else {
-				log.Printf("Invalid integer value for %s: %s, using default: %d", key, value, defaultValue)
+				slog.Warn("Invalid integer value, using default",
+					"key", key,
+					"value", value,
+					"default", defaultValue)
 				return defaultValue
 			}
 		}

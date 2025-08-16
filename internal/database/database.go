@@ -6,13 +6,15 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"log"
+	"log/slog"
+	"os"
 	"time"
 )
 
 type Database struct {
-	Mongo   *mongo.Client
-	MongoDB *mongo.Database
+	Mongo           *mongo.Client
+	db              *mongo.Database
+	emailCollection *mongo.Collection
 }
 
 func InitializeDatabase(config *config.Config) (*Database, error) {
@@ -22,76 +24,52 @@ func InitializeDatabase(config *config.Config) (*Database, error) {
 	// Connect to MongoDB
 	client, err := mongo.Connect(options.Client().ApplyURI(config.DatabaseURL))
 	if err != nil {
-		log.Printf("Failed to connect to MongoDB: %v", err)
+		slog.Error("Failed to connect to MongoDB", "error", err)
 		return nil, err
 	}
 
 	// Test MongoDB connection
 	if err = client.Ping(ctx, nil); err != nil {
-		log.Printf("Failed to ping MongoDB: %v", err)
+		slog.Error("Failed to ping MongoDB", "error", err)
 		return nil, err
 	}
 
-	log.Println("Connected to MongoDB")
+	slog.Info("Connected to MongoDB")
 
 	database := &Database{
-		Mongo:   client,
-		MongoDB: client.Database(config.DBName),
+		Mongo: client,
+		db:    client.Database(config.DBName),
 	}
+
+	// Initialize collections
+	database.emailCollection = database.initEmailCollection(ctx)
 
 	return database, nil
 }
 
-func (database *Database) CreateCollection(ctx context.Context, collectionName string) error {
+func (database *Database) createCollection(ctx context.Context, collectionName string, validator bson.M) {
 	// If collection exists, skip creation
-	if database.isCollectionExists(ctx, collectionName) {
-		return nil
-	}
-
-	// Create collection
-	if err := database.MongoDB.CreateCollection(ctx, collectionName); err != nil {
-		return err
-	}
-
-	log.Printf("Collection '%s' created successfully", collectionName)
-	return nil
-}
-
-func (database *Database) CreateCollectionWithValidation(
-	ctx context.Context,
-	collectionName string,
-	validator bson.M,
-) error {
-	// If collection exists, skip creation
-	if database.isCollectionExists(ctx, collectionName) {
-		return nil
+	collections, _ := database.db.ListCollectionNames(ctx, bson.M{"name": collectionName})
+	if len(collections) > 0 {
+		return
 	}
 
 	// Create collection with validation schema
 	opts := options.CreateCollection().SetValidator(validator)
-	if err := database.MongoDB.CreateCollection(ctx, collectionName, opts); err != nil {
-		return err
+	if err := database.db.CreateCollection(ctx, collectionName, opts); err != nil {
+		slog.Error("Failed to create collection", "collection", collectionName, "error", err)
+		os.Exit(1)
 	}
 
-	log.Printf("Collection '%s' created successfully", collectionName)
-	return nil
+	slog.Info("Collection created successfully", "collection", collectionName)
 }
 
-func (database *Database) isCollectionExists(ctx context.Context, collectionName string) bool {
-	collections, _ := database.MongoDB.ListCollectionNames(ctx, bson.M{"name": collectionName})
-
-	return len(collections) > 0
-}
-
-func (database *Database) CreateIndexes(
-	ctx context.Context,
-	collection *mongo.Collection,
-	indexes []mongo.IndexModel,
-) error {
+func (database *Database) createIndexes(ctx context.Context, collection *mongo.Collection, indexes []mongo.IndexModel) {
 	_, err := collection.Indexes().CreateMany(ctx, indexes)
 	if err != nil {
-		return err
+		slog.Error("Failed to create indexes", "collection", collection.Name(), "error", err)
+		os.Exit(1)
 	}
 
-	return nil
+	slog.Info("Indexes created successfully", "collection", collection.Name())
 }

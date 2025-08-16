@@ -9,8 +9,9 @@ import (
 	"github.com/aarondever/url-forg/internal/handlers"
 	"github.com/aarondever/url-forg/internal/models"
 	"github.com/aarondever/url-forg/internal/services"
+	"github.com/aarondever/url-forg/internal/utils"
 	"github.com/go-chi/chi/v5/middleware"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,29 +27,31 @@ type Application struct {
 }
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// Config logger
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	slog.SetDefault(logger)
 
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Configuration loading failed: %v", err)
+		slog.Error("Configuration loading failed", "error", err)
+		os.Exit(1)
 	}
-
-	// Config timezone
-	time.Local = cfg.Timezone
-	log.Printf("Application timezone: %s\n", cfg.Timezone)
 
 	// Initialize database connection pool
 	db, err := database.InitializeDatabase(cfg)
 	if err != nil {
-		log.Fatalf("Database initialization failed: %v", err)
+		slog.Error("Database initialization failed", "error", err)
+		os.Exit(1)
 	}
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		if err := db.Mongo.Disconnect(ctx); err != nil {
-			log.Printf("Database disconnection error: %v", err)
+			slog.Error("Database disconnection error", "error", err)
 		}
 	}()
 
@@ -81,22 +84,29 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	// Setup app routers
+	router.Route("/api", func(r chi.Router) {
+		router.Get("/health", app.getHealth)
+		router.Get("/metrics", app.getMetrics)
+	})
+
 	// Setup graceful shutdown handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		sig := <-sigChan
-		log.Printf("Received shutdown signal: %v", sig)
-		log.Printf("Initiating graceful shutdown...")
+		slog.Info("Received shutdown signal", "signal", sig)
+		slog.Info("Initiating graceful shutdown...")
 
 		app.initiateShutdown()
 	}()
 
-	log.Printf("Starting web server on %s", app.webServer.Addr)
+	slog.Info("Starting web server", "address", app.webServer.Addr)
 
 	// Start server (blocking call)
 	if err = app.webServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("Web server failed to start: %v", err)
+		slog.Error("Web server failed to start", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -106,19 +116,34 @@ func (app *Application) initiateShutdown() {
 
 	// Stop web server with timeout
 	if app.webServer != nil {
-		log.Printf("Stopping web server...")
+		slog.Info("Stopping web server...")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
 		if err := app.webServer.Shutdown(ctx); err != nil {
-			log.Printf("Web server shutdown error: %v", err)
+			slog.Error("Web server shutdown error", "error", err)
 		} else {
-			log.Printf("Web server stopped gracefully")
+			slog.Info("Web server stopped gracefully")
 		}
 	}
 
-	log.Printf("Graceful shutdown completed in %v", time.Since(shutdownStart))
-	log.Printf("Final application metrics:\n  Start Time: %s\n  Total Uptime: %v",
-		app.metrics.StartTime.Format(time.RFC3339), app.metrics.TotalUptime)
+	slog.Info("Graceful shutdown completed", "duration", time.Since(shutdownStart))
+	slog.Info("Final application metrics",
+		"start_time", app.metrics.StartTime.Format(time.RFC3339),
+		"total_uptime", app.metrics.TotalUptime,
+	)
+}
+
+func (app *Application) getHealth(w http.ResponseWriter, r *http.Request) {
+	healthResponse := map[string]interface{}{
+		"status":  "healthy",
+		"service": "go-notifier",
+	}
+	utils.RespondWithJSON(w, http.StatusOK, healthResponse)
+}
+
+func (app *Application) getMetrics(w http.ResponseWriter, r *http.Request) {
+	app.metrics.TotalUptime = time.Since(app.metrics.StartTime)
+	utils.RespondWithJSON(w, http.StatusOK, app.metrics)
 }
