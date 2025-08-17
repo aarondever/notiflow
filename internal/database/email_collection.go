@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/aarondever/url-forg/internal/models"
+	"github.com/aarondever/notiflow/internal/models"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -42,12 +42,32 @@ func (database *Database) CreateEmail(ctx context.Context, email models.Email) (
 	return database.GetEmailByID(ctx, result.InsertedID.(bson.ObjectID).Hex())
 }
 
-func (database *Database) UpdateEmail(ctx context.Context, email models.Email) (*models.Email, error) {
+func (database *Database) UpdateEmailFail(ctx context.Context, email models.Email) (*models.Email, error) {
 	if email.ID == bson.NilObjectID {
 		return nil, fmt.Errorf("ID is required for updating an email")
 	}
 
-	_, err := database.emailCollection.UpdateOne(ctx, bson.M{"_id": email.ID}, email)
+	_, err := database.emailCollection.UpdateOne(
+		ctx,
+		bson.M{"_id": email.ID},
+		bson.M{"$set": bson.M{"status": models.StatusFailed, "error_message": email.ErrorMsg}})
+	if err != nil {
+		slog.Error("Failed to update email", "error", err)
+		return nil, err
+	}
+
+	return database.GetEmailByID(ctx, email.ID.Hex())
+}
+
+func (database *Database) UpdateEmailSent(ctx context.Context, email models.Email) (*models.Email, error) {
+	if email.ID == bson.NilObjectID {
+		return nil, fmt.Errorf("ID is required for updating an email")
+	}
+
+	_, err := database.emailCollection.UpdateOne(
+		ctx,
+		bson.M{"_id": email.ID},
+		bson.M{"$set": bson.M{"status": models.StatusSent, "sent_at": email.SentAt}})
 	if err != nil {
 		slog.Error("Failed to update email", "error", err)
 		return nil, err

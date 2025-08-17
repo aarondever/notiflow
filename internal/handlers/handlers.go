@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/aarondever/url-forg/internal/services"
+	"github.com/aarondever/notiflow/internal/services"
 	"github.com/go-chi/chi/v5"
 )
 

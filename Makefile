@@ -1,6 +1,6 @@
 # Go related variables
-BINARY_NAME := notifier
-MAIN_PATH := ./cmd/notifier
+BINARY_NAME := notiflow
+MAIN_PATH := ./cmd/notiflow
 BUILD_DIR := ./build
 TMP_DIR := ./tmp
 

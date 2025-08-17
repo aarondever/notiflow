@@ -43,11 +43,12 @@ func Load() (*Config, error) {
 		AppEnv:       getStringEnv("APP_ENV", "development"),
 		Host:         getStringEnv("HOST", "0.0.0.0"),
 		Port:         getIntEnv("PORT", 8080),
-		DBName:       getStringEnv("DB_NAME", "go_notifier"),
+		DBName:       getStringEnv("DB_NAME", "notiflow"),
 		SMTPHost:     getStringEnv("SMTP_HOST", "smtp.gmail.com"),
 		SMTPPort:     getIntEnv("SMTP_PORT", 587),
 		SMTPUsername: getStringEnv("SMTP_USERNAME", ""),
 		SMTPPassword: getStringEnv("SMTP_PASSWORD", ""),
+		FromEmail:    getStringEnv("FROM_EMAIL", ""),
 		Timezone:     timezone,
 	}
 

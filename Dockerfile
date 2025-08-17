@@ -9,7 +9,7 @@ RUN go mod download
 COPY . .
 
 # Build application binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o notifier ./cmd/notifier
+RUN CGO_ENABLED=0 GOOS=linux go build -o notiflow ./cmd/notiflow
 
 # Runtime stage
 FROM alpine:latest
@@ -18,10 +18,9 @@ RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /root/
 
-COPY --from=builder /app/notifier .
+COPY --from=builder /app/notiflow .
+COPY --from=builder /app/scripts/entrypoint.sh .
 
-# Copy entrypoint script
-COPY scripts/entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
 EXPOSE 8080

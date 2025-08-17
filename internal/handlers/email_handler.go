@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"github.com/aarondever/url-forg/internal/models"
-	"github.com/aarondever/url-forg/internal/services"
-	"github.com/aarondever/url-forg/internal/utils"
+	"github.com/aarondever/notiflow/internal/models"
+	"github.com/aarondever/notiflow/internal/services"
+	"github.com/aarondever/notiflow/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
@@ -18,6 +18,7 @@ func NewEmailHandler(emailService *services.EmailService) *EmailHandler {
 
 func (handler *EmailHandler) RegisterRoutes(router *chi.Mux) {
 	router.Route("/api/v1/email", func(router chi.Router) {
+		router.Post("/", handler.SendEmail)
 	})
 }
 

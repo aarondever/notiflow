@@ -3,18 +3,15 @@ package services
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"github.com/aarondever/url-forg/internal/config"
-	"github.com/aarondever/url-forg/internal/database"
-	"github.com/aarondever/url-forg/internal/models"
+	"github.com/aarondever/notiflow/internal/config"
+	"github.com/aarondever/notiflow/internal/database"
+	"github.com/aarondever/notiflow/internal/models"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"gopkg.in/gomail.v2"
 	"io"
 	"log/slog"
 	"time"
 )
-
-const EmailCollectionName = "emails"
 
 type EmailService struct {
 	db  *database.Database
@@ -43,7 +40,8 @@ func (service *EmailService) SendEmail(ctx context.Context, params *models.SendE
 	// Save to database
 	dbEmail, err := service.db.CreateEmail(ctx, email)
 	if err != nil {
-		return nil, fmt.Errorf("failed to save email: %w", err)
+		slog.Error("Failed to create email", "error", err)
+		return nil, err
 	}
 
 	// Send email asynchronously
@@ -93,24 +91,24 @@ func (service *EmailService) sendEmailAsync(emailID bson.ObjectID, params *model
 
 	// Send email
 	if err := dialer.DialAndSend(message); err != nil {
+		slog.Error("Failed to send email", "error", err)
+
 		// Update status to failed
-		_, err = service.db.UpdateEmail(ctx, models.Email{
+		_, err = service.db.UpdateEmailFail(ctx, models.Email{
 			ID:       emailID,
-			Status:   models.StatusFailed,
 			ErrorMsg: err.Error(),
 		})
 		if err != nil {
 			slog.Error("Failed to update email", "error", err)
 		}
+
 		return
 	}
 
 	// Update status to sent
-	_, err := service.db.UpdateEmail(ctx, models.Email{
-		ID:       emailID,
-		Status:   models.StatusSent,
-		ErrorMsg: "",
-		SentAt:   time.Now(),
+	_, err := service.db.UpdateEmailSent(ctx, models.Email{
+		ID:     emailID,
+		SentAt: time.Now(),
 	})
 	if err != nil {
 		slog.Error("Failed to update email", "error", err)

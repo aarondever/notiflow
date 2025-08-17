@@ -10,7 +10,7 @@ services:
       - DB_HOST=mongo
       - DB_USER=${DB_USER:-mongo}
       - DB_PASSWORD=${DB_PASSWORD:-mongo}
-      - DB_NAME=${DB_NAME:-go_notifier}
+      - DB_NAME=${DB_NAME:-notiflow}
     depends_on:
       - mongo
 
@@ -22,7 +22,7 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${DB_USER:-mongo}
       - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD:-mongo}
-      - MONGO_INITDB_DATABASE=${DB_NAME:-go_notifier}
+      - MONGO_INITDB_DATABASE=${DB_NAME:-notiflow}
     volumes:
       - mongo-data:/data/db
 

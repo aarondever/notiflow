@@ -1,4 +1,4 @@
-module github.com/aarondever/url-forg
+module github.com/aarondever/notiflow
 
 go 1.25
 

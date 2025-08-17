@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aarondever/url-forg/internal/config"
-	"github.com/aarondever/url-forg/internal/database"
-	"github.com/aarondever/url-forg/internal/handlers"
-	"github.com/aarondever/url-forg/internal/models"
-	"github.com/aarondever/url-forg/internal/services"
-	"github.com/aarondever/url-forg/internal/utils"
+	"github.com/aarondever/notiflow/internal/config"
+	"github.com/aarondever/notiflow/internal/database"
+	"github.com/aarondever/notiflow/internal/handlers"
+	"github.com/aarondever/notiflow/internal/models"
+	"github.com/aarondever/notiflow/internal/services"
+	"github.com/aarondever/notiflow/internal/utils"
 	"github.com/go-chi/chi/v5/middleware"
 	"log/slog"
 	"net/http"
@@ -138,7 +138,7 @@ func (app *Application) initiateShutdown() {
 func (app *Application) getHealth(w http.ResponseWriter, r *http.Request) {
 	healthResponse := map[string]interface{}{
 		"status":  "healthy",
-		"service": "go-notifier",
+		"service": "notiflow",
 	}
 	utils.RespondWithJSON(w, http.StatusOK, healthResponse)
 }

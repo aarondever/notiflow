@@ -1,8 +1,8 @@
 package services
 
 import (
-	"github.com/aarondever/url-forg/internal/config"
-	"github.com/aarondever/url-forg/internal/database"
+	"github.com/aarondever/notiflow/internal/config"
+	"github.com/aarondever/notiflow/internal/database"
 )
 
 type Services struct {

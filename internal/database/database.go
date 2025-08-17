@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"github.com/aarondever/url-forg/internal/config"
+	"github.com/aarondever/notiflow/internal/config"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
