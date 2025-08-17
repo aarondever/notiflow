@@ -19,10 +19,7 @@ RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /root/
 
 COPY --from=builder /app/notiflow .
-COPY --from=builder /app/scripts/entrypoint.sh .
-
-RUN chmod +x entrypoint.sh
 
 EXPOSE 8080
 
-ENTRYPOINT ["./entrypoint.sh"]
+CMD ["./notiflow"]
