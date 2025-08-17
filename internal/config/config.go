@@ -17,7 +17,7 @@ type Config struct {
 	Database    DatabaseConfig     `yaml:"database"`
 	Redis       RedisConfig        `yaml:"redis"`
 	Logging     LoggingConfig      `yaml:"logging"`
-	SMTPServers []SMTPServerConfig `yaml:"email"`
+	SMTPServers []SMTPServerConfig `yaml:"smtp_servers"`
 }
 
 type ServerConfig struct {
@@ -47,12 +47,12 @@ type LoggingConfig struct {
 }
 
 type SMTPServerConfig struct {
+	Name      string `json:"name"`
 	Host      string `yaml:"host"`
 	Port      int    `yaml:"port"`
 	Username  string `yaml:"username"`
 	Password  string `yaml:"password"`
 	FromEmail string `yaml:"from_email"`
-	Name      string `json:"name"`
 }
 
 func LoadConfig() (*Config, error) {

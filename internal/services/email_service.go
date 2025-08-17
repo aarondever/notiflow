@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/aarondever/notiflow/internal/config"
 	"github.com/aarondever/notiflow/internal/database"
 	"github.com/aarondever/notiflow/internal/models"
@@ -14,18 +15,26 @@ import (
 )
 
 type EmailService struct {
-	db  *database.Database
-	cfg *config.Config
+	db                   *database.Database
+	cfg                  *config.Config
+	smtpServerCount      int
+	smtpServerUsageCount int
 }
 
 func NewEmailService(db *database.Database, cfg *config.Config) *EmailService {
 	return &EmailService{
-		db:  db,
-		cfg: cfg,
+		db:                   db,
+		cfg:                  cfg,
+		smtpServerCount:      len(cfg.SMTPServers),
+		smtpServerUsageCount: 0,
 	}
 }
 
 func (service *EmailService) SendEmail(ctx context.Context, params *models.SendEmailRequest) (*models.Email, error) {
+	if service.smtpServerCount == 0 {
+		return nil, fmt.Errorf("no SMTP servers configured")
+	}
+
 	// Create email record
 	email := models.Email{
 		To:          params.To,
@@ -47,15 +56,20 @@ func (service *EmailService) SendEmail(ctx context.Context, params *models.SendE
 	// Send email asynchronously
 	go service.sendEmailAsync(dbEmail.ID, params)
 
+	service.smtpServerUsageCount++
+
 	return dbEmail, nil
 }
 
 func (service *EmailService) sendEmailAsync(emailID bson.ObjectID, params *models.SendEmailRequest) {
 	ctx := context.Background()
 
+	smtpServer := service.cfg.SMTPServers[service.smtpServerUsageCount%service.smtpServerCount]
+	slog.Info("Using SMTP server sending email", "name", smtpServer.Name)
+
 	// Create message
 	message := gomail.NewMessage()
-	message.SetHeader("From", service.cfg.FromEmail)
+	message.SetHeader("From", smtpServer.FromEmail)
 	message.SetHeader("To", params.To...)
 
 	if len(params.CC) > 0 {
@@ -84,10 +98,10 @@ func (service *EmailService) sendEmailAsync(emailID bson.ObjectID, params *model
 
 	// Configure SMTP
 	dialer := gomail.NewDialer(
-		service.cfg.SMTPHost,
-		service.cfg.SMTPPort,
-		service.cfg.SMTPUsername,
-		service.cfg.SMTPPassword)
+		smtpServer.Host,
+		smtpServer.Port,
+		smtpServer.Username,
+		smtpServer.Password)
 
 	// Send email
 	if err := dialer.DialAndSend(message); err != nil {
