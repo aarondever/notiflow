@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"github.com/aarondever/notiflow/internal/config"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -21,8 +22,14 @@ func InitializeDatabase(config *config.Config) (*Database, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	databaseURL := fmt.Sprintf("mongodb://%s:%s@%s:%d",
+		config.Database.Username,
+		config.Database.Password,
+		config.Database.Host,
+		config.Database.Port)
+
 	// Connect to MongoDB
-	client, err := mongo.Connect(options.Client().ApplyURI(config.DatabaseURL))
+	client, err := mongo.Connect(options.Client().ApplyURI(databaseURL))
 	if err != nil {
 		slog.Error("Failed to connect to MongoDB", "error", err)
 		return nil, err
@@ -38,7 +45,7 @@ func InitializeDatabase(config *config.Config) (*Database, error) {
 
 	database := &Database{
 		Mongo: client,
-		db:    client.Database(config.DBName),
+		db:    client.Database(config.Database.Name),
 	}
 
 	// Initialize collections
