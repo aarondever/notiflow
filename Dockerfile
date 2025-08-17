@@ -22,4 +22,5 @@ COPY --from=builder /app/notiflow .
 
 EXPOSE 8080
 
-CMD ["./notiflow"]
+ENTRYPOINT ["/root/notiflow"]
+CMD ["-config.file=/etc/notiflow/config.yaml"]
