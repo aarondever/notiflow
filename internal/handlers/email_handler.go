@@ -25,20 +25,20 @@ func (handler *EmailHandler) RegisterRoutes(router *chi.Mux) {
 func (handler *EmailHandler) SendEmail(responseWriter http.ResponseWriter, request *http.Request) {
 	var params models.SendEmailRequest
 	if err := utils.DecodeRequestBody(request, &params); err != nil {
-		utils.RespondWithError(responseWriter, http.StatusBadRequest, err.Error())
+		utils.RespondWithError(responseWriter, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	email, err := handler.emailService.SendEmail(request.Context(), &params)
 	if err != nil {
-		utils.RespondWithError(responseWriter, http.StatusInternalServerError, err.Error())
+		utils.RespondWithError(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	utils.RespondWithJSON(responseWriter, http.StatusCreated, models.EmailResponse{
+	utils.RespondWithJSON(responseWriter, models.EmailResponse{
 		ID:        email.ID.Hex(),
 		Status:    models.StatusPending,
 		Message:   "Email queued for sending",
 		CreatedAt: email.CreatedAt,
-	})
+	}, http.StatusCreated)
 }

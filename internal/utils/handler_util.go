@@ -8,28 +8,28 @@ import (
 )
 
 // RespondWithJSON marshals the given payload to JSON and writes it to the response writer
-func RespondWithJSON(responseWriter http.ResponseWriter, statusCode int, payload any) {
+func RespondWithJSON(responseWriter http.ResponseWriter, payload any, statusCode int) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		slog.Error("Failed to marshal JSON response", "error", err, "payload", payload)
-		RespondWithError(responseWriter, http.StatusInternalServerError, err.Error())
+		RespondWithError(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	responseWriter.Header().Add("Content-Type", "application/json")
+	responseWriter.Header().Set("Content-Type", "application/json")
 	responseWriter.WriteHeader(statusCode)
 	responseWriter.Write(data)
 }
 
 // RespondWithError sends a standardized error response in JSON format
-func RespondWithError(responseWriter http.ResponseWriter, statusCode int, err string) {
+func RespondWithError(responseWriter http.ResponseWriter, err string, statusCode int) {
 	slog.Error("Responding with error", "error", err, "status_code", statusCode)
 
 	type errorResponse struct {
 		Error string `json:"error"`
 	}
 
-	RespondWithJSON(responseWriter, statusCode, errorResponse{err})
+	RespondWithJSON(responseWriter, errorResponse{err}, statusCode)
 }
 
 func DecodeRequestBody(request *http.Request, params any) error {

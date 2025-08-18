@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aarondever/notiflow/internal/models"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -22,6 +23,10 @@ func (database *Database) GetEmailByID(ctx context.Context, id string) (*models.
 
 	var email models.Email
 	if err = database.emailCollection.FindOne(ctx, bson.M{"_id": emailID}).Decode(&email); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil
+		}
+
 		slog.Error("Failed to find email", "error", err)
 		return nil, err
 	}
