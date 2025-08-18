@@ -20,7 +20,9 @@ WORKDIR /root/
 
 COPY --from=builder /app/notiflow .
 
+VOLUME ["/etc/notiflow"]
+
 EXPOSE 8080
 
-ENTRYPOINT ["/root/notiflow"]
+ENTRYPOINT ["./notiflow"]
 CMD ["-config.file=/etc/notiflow/config.yaml"]
