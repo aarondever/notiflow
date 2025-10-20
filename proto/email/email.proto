@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package email;
+
+option go_package = "github.com/aarondever/notiflow/proto/email";
+
+import "google/protobuf/timestamp.proto";
+
+service EmailService {
+  rpc SendEmail(SendEmailRequest) returns (SendEmailResponse);
+}
+
+message SendEmailRequest {
+  repeated string to = 1;
+  repeated string cc = 2;
+  repeated string bcc = 3;
+  string subject = 4;
+  string body = 5;
+  bool is_html = 6;
+  repeated Attachment attachments = 7;
+}
+
+message Attachment {
+  string filename = 1;
+  bytes content = 2;
+  string content_type = 3;
+}
+
+message SendEmailResponse {
+  string id = 1;
+  string status = 2;
+  string message = 3;
+  google.protobuf.Timestamp created_at = 4;
+}

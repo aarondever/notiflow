@@ -9,9 +9,11 @@ package internal
 import (
 	"github.com/aarondever/notiflow/internal/config"
 	"github.com/aarondever/notiflow/internal/database"
+	"github.com/aarondever/notiflow/internal/grpc"
 	"github.com/aarondever/notiflow/internal/handlers"
 	"github.com/aarondever/notiflow/internal/services"
 	"github.com/gin-gonic/gin"
+	grpc2 "google.golang.org/grpc"
 )
 
 // Injectors from wire.go:
@@ -24,28 +26,35 @@ func InitializeApp(cfg *config.Config) (*App, error) {
 	}
 	emailService := services.NewEmailService(databaseDatabase, cfg)
 	emailHandler := handlers.NewEmailHandler(emailService)
-	app := NewApp(databaseDatabase, emailHandler)
+	emailGRPCHandler := grpc.NewEmailGRPCHandler(emailService)
+	app := NewApp(databaseDatabase, emailHandler, emailGRPCHandler)
 	return app, nil
 }
 
 // wire.go:
 
 type App struct {
-	DB     *database.Database
-	Router *gin.Engine
+	DB         *database.Database
+	Router     *gin.Engine
+	GRPCServer *grpc2.Server
 }
 
 func NewApp(
 	db *database.Database,
 	emailHandler *handlers.EmailHandler,
+	emailGRPCHandler *grpc.EmailGRPCHandler,
 
 ) *App {
-	router := gin.Default()
 
+	router := gin.Default()
 	emailHandler.SetupRouters(router)
 
+	grpcSrv := grpc2.NewServer()
+	grpc.RegisterEmailService(grpcSrv, emailGRPCHandler)
+
 	return &App{
-		DB:     db,
-		Router: router,
+		DB:         db,
+		Router:     router,
+		GRPCServer: grpcSrv,
 	}
 }

@@ -21,8 +21,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	GRPCPort int    `yaml:"grpc_port"`
 }
 
 type DatabaseConfig struct {
@@ -131,8 +132,9 @@ func loadConfigFromEnv() *Config {
 
 	// Server config
 	config.Server = ServerConfig{
-		Host: getStringEnv("HOST", "0.0.0.0"),
-		Port: getIntEnv("PORT", 8080),
+		Host:     getStringEnv("HOST", "0.0.0.0"),
+		Port:     getIntEnv("PORT", 8080),
+		GRPCPort: getIntEnv("GRPC_PORT", 9090),
 	}
 
 	// Database config

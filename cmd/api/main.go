@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/aarondever/notiflow/internal"
@@ -36,19 +39,52 @@ func main() {
 		slog.Error("Failed to initialize app", "error", err)
 		os.Exit(1)
 	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
 
-		_ = app.DB.Mongo.Disconnect(ctx)
+	// Setup graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Start gRPC server in a goroutine
+	grpcAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.GRPCPort)
+	go func() {
+		lis, err := net.Listen("tcp", grpcAddr)
+		if err != nil {
+			slog.Error("Failed to listen for gRPC", "error", err, "address", grpcAddr)
+			os.Exit(1)
+		}
+
+		slog.Info("Starting gRPC server", "address", grpcAddr)
+		if err := app.GRPCServer.Serve(lis); err != nil {
+			slog.Error("gRPC server failed", "error", err)
+			os.Exit(1)
+		}
 	}()
 
-	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	slog.Info("Starting web server", "address", addr)
+	// Start HTTP server in a goroutine
+	httpAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	go func() {
+		slog.Info("Starting HTTP server", "address", httpAddr)
+		if err := app.Router.Run(httpAddr); err != nil {
+			slog.Error("HTTP server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
 
-	// Start server (blocking call)
-	if err = app.Router.Run(addr); err != nil {
-		slog.Error("Web server failed to start", "error", err, "address", addr)
-		os.Exit(1)
+	// Wait for interrupt signal
+	<-ctx.Done()
+	slog.Info("Shutting down servers...")
+
+	// Graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Stop gRPC server
+	app.GRPCServer.GracefulStop()
+
+	// Disconnect from database
+	if err := app.DB.Mongo.Disconnect(shutdownCtx); err != nil {
+		slog.Error("Error disconnecting from database", "error", err)
 	}
+
+	slog.Info("Servers stopped gracefully")
 }
