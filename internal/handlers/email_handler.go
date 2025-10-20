@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/aarondever/notiflow/internal/models"
-	"github.com/aarondever/notiflow/internal/services"
 	"github.com/aarondever/notiflow/internal/types"
 	"github.com/gin-gonic/gin"
 )
@@ -13,7 +12,7 @@ type EmailHandler struct {
 	emailService types.EmailService
 }
 
-func NewEmailHandler(emailService *services.EmailService) *EmailHandler {
+func NewEmailHandler(emailService types.EmailService) *EmailHandler {
 	return &EmailHandler{
 		emailService: emailService,
 	}

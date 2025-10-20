@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/aarondever/notiflow/internal/models"
-	"github.com/aarondever/notiflow/internal/services"
 	"github.com/aarondever/notiflow/internal/types"
 	pb "github.com/aarondever/notiflow/proto/email"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -15,7 +14,7 @@ type EmailGRPCHandler struct {
 	pb.UnimplementedEmailServiceServer
 }
 
-func NewEmailGRPCHandler(emailService *services.EmailService) *EmailGRPCHandler {
+func NewEmailGRPCHandler(emailService types.EmailService) *EmailGRPCHandler {
 	return &EmailGRPCHandler{
 		emailService: emailService,
 	}

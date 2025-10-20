@@ -33,11 +33,10 @@ func InitializeApp(cfg *config.Config) (*App, error) {
 
 // wire.go:
 
-// App holds all application dependencies
 type App struct {
+	DB         *database.Database
 	Router     *gin.Engine
 	GRPCServer *grpc.Server
-	DB         *database.Database
 }
 
 func NewApp(

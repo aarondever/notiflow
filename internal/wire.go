@@ -14,11 +14,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-// App holds all application dependencies
 type App struct {
+	DB         *database.Database
 	Router     *gin.Engine
 	GRPCServer *grpc.Server
-	DB         *database.Database
 }
 
 func NewApp(

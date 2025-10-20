@@ -11,6 +11,7 @@ import (
 	"github.com/aarondever/notiflow/internal/config"
 	"github.com/aarondever/notiflow/internal/database"
 	"github.com/aarondever/notiflow/internal/models"
+	"github.com/aarondever/notiflow/internal/types"
 	"gopkg.in/gomail.v2"
 )
 
@@ -21,7 +22,7 @@ type EmailService struct {
 	smtpServerUsageCount int
 }
 
-func NewEmailService(db *database.Database, cfg *config.Config) *EmailService {
+func NewEmailService(db *database.Database, cfg *config.Config) types.EmailService {
 	return &EmailService{
 		db:                   db,
 		cfg:                  cfg,
