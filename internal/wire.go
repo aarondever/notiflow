@@ -6,33 +6,34 @@ package internal
 import (
 	"github.com/aarondever/notiflow/internal/config"
 	"github.com/aarondever/notiflow/internal/database"
-	"github.com/aarondever/notiflow/internal/grpc"
 	"github.com/aarondever/notiflow/internal/handlers"
 	"github.com/aarondever/notiflow/internal/services"
+	"github.com/aarondever/notiflow/proto/email"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
-	grpcServer "google.golang.org/grpc"
+	"google.golang.org/grpc"
 )
 
+// App holds all application dependencies
 type App struct {
-	DB         *database.Database
 	Router     *gin.Engine
-	GRPCServer *grpcServer.Server
+	GRPCServer *grpc.Server
+	DB         *database.Database
 }
 
 func NewApp(
 	db *database.Database,
 	emailHandler *handlers.EmailHandler,
-	emailGRPCHandler *grpc.EmailGRPCHandler,
+	emailGRPCHandler *handlers.EmailGRPCHandler,
 	// Add all handlers as parameters
 ) *App {
 	// Setup HTTP router
 	router := gin.Default()
-	emailHandler.SetupRouters(router)
+	emailHandler.RegisterRouter(router)
 
 	// Setup gRPC server
-	grpcSrv := grpcServer.NewServer()
-	grpc.RegisterEmailService(grpcSrv, emailGRPCHandler)
+	grpcSrv := grpc.NewServer()
+	email.RegisterEmailServiceServer(grpcSrv, emailGRPCHandler)
 
 	return &App{
 		DB:         db,
@@ -47,7 +48,6 @@ func InitializeApp(cfg *config.Config) (*App, error) {
 		database.NewDatabase,
 		services.ProviderSet,
 		handlers.ProviderSet,
-		grpc.ProviderSet,
 		NewApp,
 	)
 

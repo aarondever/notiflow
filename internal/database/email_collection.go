@@ -35,7 +35,7 @@ func (database *Database) GetEmailByID(ctx context.Context, id string) (*models.
 	return &email, nil
 }
 
-func (database *Database) CreateEmail(ctx context.Context, email models.Email) (*models.Email, error) {
+func (database *Database) CreateEmail(ctx context.Context, email *models.Email) (*models.Email, error) {
 	email.CreatedAt = time.Now()
 	email.Status = models.StatusPending
 
@@ -48,7 +48,7 @@ func (database *Database) CreateEmail(ctx context.Context, email models.Email) (
 	return database.GetEmailByID(ctx, result.InsertedID.(bson.ObjectID).Hex())
 }
 
-func (database *Database) UpdateEmailFail(ctx context.Context, email models.Email) (*models.Email, error) {
+func (database *Database) UpdateEmailFail(ctx context.Context, email *models.Email) (*models.Email, error) {
 	if email.ID == bson.NilObjectID {
 		return nil, fmt.Errorf("ID is required for updating an email")
 	}
@@ -65,7 +65,7 @@ func (database *Database) UpdateEmailFail(ctx context.Context, email models.Emai
 	return database.GetEmailByID(ctx, email.ID.Hex())
 }
 
-func (database *Database) UpdateEmailSent(ctx context.Context, email models.Email) (*models.Email, error) {
+func (database *Database) UpdateEmailSent(ctx context.Context, email *models.Email) (*models.Email, error) {
 	if email.ID == bson.NilObjectID {
 		return nil, fmt.Errorf("ID is required for updating an email")
 	}

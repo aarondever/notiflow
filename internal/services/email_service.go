@@ -11,7 +11,6 @@ import (
 	"github.com/aarondever/notiflow/internal/config"
 	"github.com/aarondever/notiflow/internal/database"
 	"github.com/aarondever/notiflow/internal/models"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"gopkg.in/gomail.v2"
 )
 
@@ -31,65 +30,54 @@ func NewEmailService(db *database.Database, cfg *config.Config) *EmailService {
 	}
 }
 
-func (service *EmailService) SendEmail(ctx context.Context, params *models.SendEmailRequest) (*models.Email, error) {
-	if service.smtpServerCount == 0 {
+func (s *EmailService) SendEmail(ctx context.Context, email *models.Email) (*models.Email, error) {
+	if s.smtpServerCount == 0 {
 		return nil, fmt.Errorf("no SMTP servers configured")
 	}
 
-	// Create email record
-	email := models.Email{
-		To:          params.To,
-		CC:          params.CC,
-		BCC:         params.BCC,
-		Subject:     params.Subject,
-		Body:        params.Body,
-		IsHTML:      params.IsHTML,
-		Attachments: params.Attachments,
-	}
-
 	// Save to database
-	dbEmail, err := service.db.CreateEmail(ctx, email)
+	dbEmail, err := s.db.CreateEmail(ctx, email)
 	if err != nil {
 		slog.Error("Failed to create email", "error", err)
 		return nil, err
 	}
 
 	// Send email asynchronously
-	go service.sendEmailAsync(dbEmail.ID, params)
+	go s.sendEmailAsync(dbEmail)
 
-	service.smtpServerUsageCount++
+	s.smtpServerUsageCount++
 
 	return dbEmail, nil
 }
 
-func (service *EmailService) sendEmailAsync(emailID bson.ObjectID, params *models.SendEmailRequest) {
+func (s *EmailService) sendEmailAsync(email *models.Email) {
 	ctx := context.Background()
 
-	smtpServer := service.cfg.SMTPServers[service.smtpServerUsageCount%service.smtpServerCount]
+	smtpServer := s.cfg.SMTPServers[s.smtpServerUsageCount%s.smtpServerCount]
 	slog.Info("Using SMTP server sending email", "username", smtpServer.Username, "host")
 
 	// Create message
 	message := gomail.NewMessage()
 	message.SetHeader("From", smtpServer.FromEmail)
-	message.SetHeader("To", params.To...)
+	message.SetHeader("To", email.To...)
 
-	if len(params.CC) > 0 {
-		message.SetHeader("Cc", params.CC...)
+	if len(email.CC) > 0 {
+		message.SetHeader("Cc", email.CC...)
 	}
-	if len(params.BCC) > 0 {
-		message.SetHeader("Bcc", params.BCC...)
+	if len(email.BCC) > 0 {
+		message.SetHeader("Bcc", email.BCC...)
 	}
 
-	message.SetHeader("Subject", params.Subject)
+	message.SetHeader("Subject", email.Subject)
 
-	if params.IsHTML {
-		message.SetBody("text/html", params.Body)
+	if email.IsHTML {
+		message.SetBody("text/html", email.Body)
 	} else {
-		message.SetBody("text/plain", params.Body)
+		message.SetBody("text/plain", email.Body)
 	}
 
 	// Add attachments
-	for _, attachment := range params.Attachments {
+	for _, attachment := range email.Attachments {
 		reader := bytes.NewReader(attachment.Content)
 		message.Attach(attachment.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
 			_, err := io.Copy(w, reader)
@@ -110,8 +98,8 @@ func (service *EmailService) sendEmailAsync(emailID bson.ObjectID, params *model
 		slog.Error("Failed to send email", "error", err)
 
 		// Update status to failed
-		_, err = service.db.UpdateEmailFail(ctx, models.Email{
-			ID:       emailID,
+		_, err = s.db.UpdateEmailFail(ctx, &models.Email{
+			ID:       email.ID,
 			ErrorMsg: err.Error(),
 		})
 		if err != nil {
@@ -122,8 +110,8 @@ func (service *EmailService) sendEmailAsync(emailID bson.ObjectID, params *model
 	}
 
 	// Update status to sent
-	_, err := service.db.UpdateEmailSent(ctx, models.Email{
-		ID:     emailID,
+	_, err := s.db.UpdateEmailSent(ctx, &models.Email{
+		ID:     email.ID,
 		SentAt: time.Now(),
 	})
 	if err != nil {

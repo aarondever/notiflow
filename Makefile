@@ -19,7 +19,7 @@ help: ## Show this help message
 
 .PHONY: wire
 wire:
-	cd internal && wire
+	@cd internal && wire
 
 # Development targets
 .PHONY: dev
