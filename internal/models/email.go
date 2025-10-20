@@ -1,8 +1,9 @@
 package models
 
 import (
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type EmailStatus string
@@ -35,11 +36,11 @@ type Attachment struct {
 }
 
 type SendEmailRequest struct {
-	To          []string     `json:"to" validate:"required"`
+	To          []string     `json:"to" bind:"required"`
 	CC          []string     `json:"cc,omitempty"`
 	BCC         []string     `json:"bcc,omitempty"`
-	Subject     string       `json:"subject" validate:"required"`
-	Body        string       `json:"body" validate:"required"`
+	Subject     string       `json:"subject" bind:"required"`
+	Body        string       `json:"body" bind:"required"`
 	IsHTML      bool         `json:"is_html"`
 	Attachments []Attachment `json:"attachments,omitempty"`
 }

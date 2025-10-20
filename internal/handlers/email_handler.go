@@ -1,11 +1,11 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/aarondever/notiflow/internal/models"
 	"github.com/aarondever/notiflow/internal/services"
-	"github.com/aarondever/notiflow/internal/utils"
-	"github.com/go-chi/chi/v5"
-	"net/http"
+	"github.com/gin-gonic/gin"
 )
 
 type EmailHandler struct {
@@ -16,29 +16,30 @@ func NewEmailHandler(emailService *services.EmailService) *EmailHandler {
 	return &EmailHandler{emailService: emailService}
 }
 
-func (handler *EmailHandler) RegisterRoutes(router *chi.Mux) {
-	router.Route("/api/v1/email", func(router chi.Router) {
-		router.Post("/", handler.SendEmail)
-	})
+func (handler *EmailHandler) SetupRouters(router *gin.Engine) {
+	emailV1 := router.Group("/api/v1/email")
+	{
+		emailV1.POST("/", handler.SendEmail)
+	}
 }
 
-func (handler *EmailHandler) SendEmail(responseWriter http.ResponseWriter, request *http.Request) {
+func (handler *EmailHandler) SendEmail(c *gin.Context) {
 	var params models.SendEmailRequest
-	if err := utils.DecodeRequestBody(request, &params); err != nil {
-		utils.RespondWithError(responseWriter, err.Error(), http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&params); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	email, err := handler.emailService.SendEmail(request.Context(), &params)
+	email, err := handler.emailService.SendEmail(c.Request.Context(), &params)
 	if err != nil {
-		utils.RespondWithError(responseWriter, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	utils.RespondWithJSON(responseWriter, models.EmailResponse{
+	c.JSON(http.StatusCreated, models.EmailResponse{
 		ID:        email.ID.Hex(),
 		Status:    models.StatusPending,
 		Message:   "Email queued for sending",
 		CreatedAt: email.CreatedAt,
-	}, http.StatusCreated)
+	})
 }

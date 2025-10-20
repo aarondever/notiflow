@@ -2,12 +2,13 @@ package config
 
 import (
 	"flag"
-	"github.com/joho/godotenv"
-	"gopkg.in/yaml.v3"
 	"log/slog"
 	"os"
 	"reflect"
 	"time"
+
+	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
@@ -15,7 +16,6 @@ type Config struct {
 	Timezone    *time.Location
 	Server      ServerConfig       `yaml:"server"`
 	Database    DatabaseConfig     `yaml:"database"`
-	Redis       RedisConfig        `yaml:"redis"`
 	Logging     LoggingConfig      `yaml:"logging"`
 	SMTPServers []SMTPServerConfig `yaml:"smtp_servers"`
 }
@@ -31,14 +31,6 @@ type DatabaseConfig struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 	Name     string `yaml:"name"`
-}
-
-type RedisConfig struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	DB       int    `yaml:"db"`
 }
 
 type LoggingConfig struct {
@@ -67,7 +59,7 @@ func LoadConfig() (*Config, error) {
 	// Load config file
 	fileConfig, err := loadConfigFromFile(configFile)
 	if err != nil {
-		slog.Error("Failed loading configuration file", "config", configFile, "error", err)
+		slog.Error("Failed loading configuration file", "error", err, "config", configFile)
 		return nil, err
 	}
 
@@ -83,7 +75,7 @@ func LoadConfig() (*Config, error) {
 
 	// Config timezone
 	time.Local = config.Timezone
-	slog.Info("Application timezone configured", "timezone", config.Timezone.String())
+	slog.Info("Application timezone configured", "timezone", config.Timezone)
 
 	return config, nil
 }
@@ -127,7 +119,7 @@ func loadConfigFromEnv() *Config {
 	tzName := getStringEnv("TZ", "UTC")
 	timezone, err := time.LoadLocation(tzName)
 	if err != nil {
-		slog.Warn("Invalid timezone, using UTC instead", "timezone", tzName, "error", err)
+		slog.Warn("Invalid timezone, using UTC instead", "error", err, "timezone", tzName)
 		timezone = time.UTC
 	}
 
@@ -150,15 +142,6 @@ func loadConfigFromEnv() *Config {
 		Username: getStringEnv("DB_USER", "mongo"),
 		Password: getStringEnv("DB_PASSWORD", "mongo"),
 		Name:     getStringEnv("DB_NAME", "notiflow"),
-	}
-
-	// Redis config
-	config.Redis = RedisConfig{
-		Host:     getStringEnv("REDIS_HOST", "localhost"),
-		Port:     getIntEnv("REDIS_PORT", 6379),
-		Username: getStringEnv("REDIS_USER", ""),
-		Password: getStringEnv("REDIS_PASS", ""),
-		DB:       getIntEnv("REDIS_DB", 0),
 	}
 
 	// Logging config
@@ -193,7 +176,7 @@ func loadConfigFromFile(filename string) (*Config, error) {
 			return nil, nil // File doesn't exist
 		}
 
-		slog.Error("Failed to open config file", "filename", filename, "error", err)
+		slog.Error("Failed to open config file", "error", err, "filename", filename)
 		return nil, err
 	}
 	defer file.Close()
@@ -201,7 +184,7 @@ func loadConfigFromFile(filename string) (*Config, error) {
 	var config Config
 	decoder := yaml.NewDecoder(file)
 	if err = decoder.Decode(&config); err != nil {
-		slog.Error("Failed to decode config file", "filename", filename, "error", err)
+		slog.Error("Failed to decode config file", "error", err, "filename", filename)
 		return nil, err
 	}
 
@@ -265,6 +248,7 @@ func getStringEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
+
 	return defaultValue
 }
 
@@ -279,12 +263,14 @@ func getIntEnv(key string, defaultValue int) int {
 				slog.Warn("Invalid integer value, using default",
 					"key", key,
 					"value", value,
-					"default", defaultValue)
+					"default", defaultValue,
+				)
 				return defaultValue
 			}
 		}
 		return result
 	}
+
 	return defaultValue
 }
 
@@ -308,12 +294,14 @@ func getFloatEnv(key string, defaultValue float64) float64 {
 				slog.Warn("Invalid float value, using default",
 					"key", key,
 					"value", value,
-					"default", defaultValue)
+					"default", defaultValue,
+				)
 				return defaultValue
 			}
 		}
 		return result
 	}
+
 	return defaultValue
 }
 
@@ -328,9 +316,11 @@ func getBoolEnv(key string, defaultValue bool) bool {
 			slog.Warn("Invalid boolean value, using default",
 				"key", key,
 				"value", value,
-				"default", defaultValue)
+				"default", defaultValue,
+			)
 			return defaultValue
 		}
 	}
+
 	return defaultValue
 }

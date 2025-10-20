@@ -3,24 +3,23 @@ package database
 import (
 	"context"
 	"fmt"
-	"github.com/aarondever/notiflow/internal/config"
-	"github.com/redis/go-redis/v9"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"log/slog"
 	"os"
 	"time"
+
+	"github.com/aarondever/notiflow/internal/config"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type Database struct {
 	Mongo           *mongo.Client
 	db              *mongo.Database
-	Redis           *redis.Client
 	emailCollection *mongo.Collection
 }
 
-func InitializeDatabase(config *config.Config) (*Database, error) {
+func NewDatabase(config *config.Config) (*Database, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -28,7 +27,8 @@ func InitializeDatabase(config *config.Config) (*Database, error) {
 		config.Database.Username,
 		config.Database.Password,
 		config.Database.Host,
-		config.Database.Port)
+		config.Database.Port,
+	)
 
 	// Connect to MongoDB
 	client, err := mongo.Connect(options.Client().ApplyURI(databaseURL))
@@ -54,51 +54,7 @@ func InitializeDatabase(config *config.Config) (*Database, error) {
 	// Initialize collections
 	database.emailCollection = database.initEmailCollection(ctx)
 
-	// Connect to Redis
-	//if err = database.connectToRedis(config); err != nil {
-	//	client.Disconnect(ctx)
-	//	return nil, err
-	//}
-
 	return database, nil
-}
-
-func (database *Database) connectToRedis(config *config.Config) error {
-	var redisURL string
-	// Format: redis://[:password@]host:port/db
-	if config.Redis.Password != "" {
-		redisURL = fmt.Sprintf("redis://:%s@%s:%d/%d",
-			config.Redis.Password,
-			config.Redis.Host,
-			config.Redis.Port,
-			config.Redis.DB)
-	} else {
-		redisURL = fmt.Sprintf("redis://%s:%d/%d",
-			config.Redis.Host,
-			config.Redis.Port,
-			config.Redis.DB)
-	}
-
-	// Initialize Redis client
-	opts, err := redis.ParseURL(redisURL)
-	if err != nil {
-		slog.Error("Error parsing Redis URL", "error", err)
-		return err
-	}
-
-	database.Redis = redis.NewClient(opts)
-
-	// Verify Redis connectivity
-	ctxPing, cancelPing := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancelPing()
-	if err = database.Redis.Ping(ctxPing).Err(); err != nil {
-		slog.Error("Redis ping failed", "error", err, "address", opts.Addr, "db", opts.DB)
-		return err
-	}
-
-	slog.Info("Connected to Redis successfully", "address", opts.Addr, "db", opts.DB)
-
-	return nil
 }
 
 func (database *Database) createCollection(ctx context.Context, collectionName string, validator bson.M) {

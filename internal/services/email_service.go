@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
+	"time"
+
 	"github.com/aarondever/notiflow/internal/config"
 	"github.com/aarondever/notiflow/internal/database"
 	"github.com/aarondever/notiflow/internal/models"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"gopkg.in/gomail.v2"
-	"io"
-	"log/slog"
-	"time"
 )
 
 type EmailService struct {
@@ -65,7 +66,7 @@ func (service *EmailService) sendEmailAsync(emailID bson.ObjectID, params *model
 	ctx := context.Background()
 
 	smtpServer := service.cfg.SMTPServers[service.smtpServerUsageCount%service.smtpServerCount]
-	slog.Info("Using SMTP server sending email", "name", smtpServer.Name)
+	slog.Info("Using SMTP server sending email", "username", smtpServer.Username, "host")
 
 	// Create message
 	message := gomail.NewMessage()
@@ -101,7 +102,8 @@ func (service *EmailService) sendEmailAsync(emailID bson.ObjectID, params *model
 		smtpServer.Host,
 		smtpServer.Port,
 		smtpServer.Username,
-		smtpServer.Password)
+		smtpServer.Password,
+	)
 
 	// Send email
 	if err := dialer.DialAndSend(message); err != nil {
